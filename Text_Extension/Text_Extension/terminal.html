@@ -1,0 +1,1182 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Median Terminal</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Consolas', 'Courier New', monospace;
+            color: #e0e0e0;
+            min-height: 100vh;
+            background-image: url('terminal.png');
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            background-color: transparent;
+            border-bottom: 1px solid white;
+        }
+
+            .header h1 {
+                font-size: 2rem;
+                margin: 0;
+                color: white;
+                text-shadow: 0 0 10px rgba(255,255,255,0.5);
+            }
+
+        .ide-container {
+            display: flex;
+            height: calc(100vh - 100px);
+            background-color: transparent;
+            border: 1px solid white;
+            margin: 10px;
+            border-radius: 5px;
+        }
+
+        .editor-pane {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid white;
+            max-width: 60%;
+            overflow: hidden;
+        }
+
+        .tab-bar {
+            display: flex;
+            background-color: transparent;
+            padding: 5px 10px 0;
+            border-bottom: 1px solid white;
+        }
+
+        .tab {
+            padding: 8px 15px;
+            background-color: transparent;
+            border: 1px solid white;
+            border-bottom: none;
+            border-radius: 4px 4px 0 0;
+            margin-right: 5px;
+            cursor: pointer;
+            color: white;
+        }
+
+            .tab.active {
+                background-color: transparent;
+                border-color: white;
+                color: white;
+            }
+
+        .filename-input {
+            background: transparent;
+            border: 1px solid white;
+            color: white;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+            padding: 2px 5px;
+            margin-left: 5px;
+            width: 150px;
+            border-radius: 3px;
+        }
+
+            .filename-input:focus {
+                outline: 1px solid white;
+                background-color: transparent;
+            }
+
+        .editor {
+            flex: 1;
+            padding: 10px 0;
+            overflow-y: auto;
+            background-color: transparent;
+        }
+
+            .editor::-webkit-scrollbar {
+                width: 10px;
+            }
+
+            .editor::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .editor::-webkit-scrollbar-thumb {
+                background: white;
+                border-radius: 5px;
+            }
+
+        .editor-line {
+            display: flex;
+            margin-bottom: 2px;
+            padding: 0 10px;
+        }
+
+            .editor-line.selected {
+                background-color: rgba(38, 79, 120, 0.5);
+                border-left: 2px solid white;
+            }
+
+        .line-number {
+            color: rgba(255,255,255,0.7);
+            min-width: 40px;
+            text-align: right;
+            padding-right: 10px;
+            user-select: none;
+        }
+
+        .line-code {
+            flex-grow: 1;
+            white-space: pre;
+            outline: none;
+            color: white;
+            background: transparent;
+            max-width: calc(100% - 50px);
+            overflow-x: auto;
+        }
+
+            .line-code::-webkit-scrollbar {
+                width: 6px;
+                height: 6px;
+                background: transparent;
+            }
+
+            .line-code::-webkit-scrollbar-thumb {
+                background: rgba(255,255,255,0.3);
+                border-radius: 3px;
+            }
+
+                .line-code::-webkit-scrollbar-thumb:hover {
+                    background: rgba(255,255,255,0.5);
+                }
+
+        .terminal-pane {
+            width: 40%;
+            display: flex;
+            flex-direction: column;
+            background-color: transparent;
+            border-left: 1px solid white;
+        }
+
+        .terminal-tabs {
+            display: flex;
+            background-color: transparent;
+            padding: 5px 10px 0;
+            border-bottom: 1px solid white;
+        }
+
+        .terminal-content {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+            background-color: transparent;
+            display: none;
+        }
+
+            .terminal-content.active {
+                display: block;
+            }
+
+            .terminal-content::-webkit-scrollbar {
+                width: 10px;
+            }
+
+            .terminal-content::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .terminal-content::-webkit-scrollbar-thumb {
+                background: white;
+                border-radius: 5px;
+            }
+
+        .terminal-line {
+            margin-bottom: 5px;
+            white-space: pre-wrap;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+
+        .command {
+            color: rgba(255,255,255,1);
+        }
+
+        .output {
+            color: rgba(255,255,255,1);
+        }
+
+        .success {
+            color: rgb(0, 255, 33);
+        }
+
+        .error {
+            color: rgb(255, 97, 97);
+        }
+
+        .warning {
+            color: rgb(255, 216, 0);
+        }
+
+        .info {
+            color: rgba(156, 220, 254,1);
+        }
+
+        .toolbar {
+            padding: 10px;
+            background-color: transparent;
+            border-top: 1px solid white;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .run-button {
+            background-color: rgba(14, 99, 156, 0.7);
+            color: white;
+            border: 1px solid white;
+            padding: 8px 15px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-family: 'Consolas', 'Courier New', monospace;
+            transition: all 0.2s;
+        }
+
+            .run-button:hover {
+                background-color: rgba(17, 119, 187, 0.8);
+            }
+
+            .run-button:active {
+                background-color: rgba(12, 77, 122, 0.9);
+            }
+
+        .text-content {
+            color: rgba(220, 220, 170, 0.9);
+        }
+
+        .extensions-panel {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background-color: rgba(20, 20, 30, 0.95);
+            border-left: 1px solid white;
+            transition: right 0.3s ease;
+            z-index: 1000;
+            overflow-y: auto;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+            .extensions-panel.open {
+                right: 0;
+            }
+
+            .extensions-panel::-webkit-scrollbar {
+                width: 10px;
+            }
+
+            .extensions-panel::-webkit-scrollbar-track {
+                background: transparent;
+            }
+
+            .extensions-panel::-webkit-scrollbar-thumb {
+                background: white;
+                border-radius: 5px;
+            }
+
+        .extensions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid white;
+        }
+
+        .close-extensions {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .extension-card {
+            border: 1px solid white;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: rgba(30, 30, 40, 0.7);
+        }
+
+        .extension-title {
+            font-size: 18px;
+            margin-bottom: 5px;
+            color: white;
+        }
+
+        .extension-author {
+            font-size: 14px;
+            color: rgba(200, 200, 255, 0.8);
+            margin-bottom: 10px;
+        }
+
+        .extension-description {
+            font-size: 14px;
+            margin-bottom: 15px;
+            color: rgba(220, 220, 220, 0.9);
+        }
+
+        .extension-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .extension-btn {
+            padding: 5px 10px;
+            border: 1px solid white;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .toggle-btn {
+            background-color: rgba(14, 99, 156, 0.7);
+            color: white;
+            display: none;
+        }
+
+            .toggle-btn.active {
+                background-color: rgba(20, 150, 50, 0.7);
+            }
+
+        .download-btn {
+            background-color: rgba(100, 60, 150, 0.7);
+            color: white;
+        }
+
+        .remove-btn {
+            background-color: rgba(150, 40, 40, 0.7);
+            color: white;
+            display: none;
+        }
+
+        .file-button {
+            background-color: rgba(60, 100, 60, 0.7);
+            color: white;
+            border: 1px solid white;
+            padding: 8px 15px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-family: 'Consolas', 'Courier New', monospace;
+            transition: all 0.2s;
+            margin-right: 10px;
+        }
+
+            .file-button:hover {
+                background-color: rgba(80, 120, 80, 0.8);
+            }
+
+        .extensions-button {
+            background-color: rgba(100, 60, 150, 0.7);
+            color: white;
+            border: 1px solid white;
+            padding: 8px 15px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-family: 'Consolas', 'Courier New', monospace;
+            transition: all 0.2s;
+        }
+
+            .extensions-button:hover {
+                background-color: rgba(120, 80, 170, 0.8);
+            }
+
+        .comment {
+            color: #00ff40;
+            text-shadow: 0 0 5px rgba(0, 255, 64, 0.5);
+        }
+
+        .hash-structure {
+            color: #00ff90;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.7);
+        }
+
+        .output-structure {
+            color: #00d8ff;
+            font-weight: bold;
+            text-shadow: 0 0 5px rgba(0, 216, 255, 0.7);
+        }
+
+        .tooltip {
+            position: absolute;
+            background-color: rgba(30, 30, 40, 0.95);
+            border: 1px solid white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            z-index: 100;
+            pointer-events: none;
+            display: none;
+        }
+
+        .hash-tooltip {
+            background-color: rgba(0, 150, 100, 0.9);
+            border-color: #00ff90;
+        }
+
+        .output-tooltip {
+            background-color: rgba(0, 150, 200, 0.9);
+            border-color: #00d8ff;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
+
+        @keyframes rainbow {
+            0% {
+                color: red;
+            }
+
+            14% {
+                color: orange;
+            }
+
+            28% {
+                color: yellow;
+            }
+
+            42% {
+                color: green;
+            }
+
+            57% {
+                color: blue;
+            }
+
+            71% {
+                color: indigo;
+            }
+
+            85% {
+                color: violet;
+            }
+
+            100% {
+                color: red;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Median Terminal</h1>
+    </div>
+
+    <div class="ide-container">
+        <div class="editor-pane">
+            <div class="tab-bar">
+                <div class="tab active">
+                    <span id="filename-display">script.mdn</span>
+                    <input type="text" class="filename-input" id="filename-input" value="script.mdn" style="display: none;">
+                </div>
+            </div>
+            <div class="editor" id="editor">
+                <div class="editor-line"><div class="line-number">1</div><div class="line-code" contenteditable="true"></div></div>
+            </div>
+            <div class="toolbar">
+                <div>
+                    <button class="file-button" id="import-button">Import</button>
+                    <button class="file-button" id="export-button">Export</button>
+                    <input type="file" id="file-input" class="file-input" accept=".mdn">
+                </div>
+                <div>
+                    <button class="extensions-button" id="extensions-button">Extensions</button>
+                    <button class="run-button" id="run-button">Run Code</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="terminal-pane">
+            <div class="terminal-tabs">
+                <div class="tab active" data-tab="terminal">Terminal</div>
+                <div class="tab" data-tab="problems">Problems</div>
+                <div class="tab" data-tab="output">Output</div>
+            </div>
+            <div class="terminal-content active" id="terminal-content-terminal">
+                <div class="terminal-line output">Median processor started...</div>
+                <div class="terminal-line output info">@ContentId Terminal</div>
+            </div>
+            <div class="terminal-content" id="terminal-content-problems"></div>
+            <div class="terminal-content" id="terminal-content-output"></div>
+        </div>
+    </div>
+
+    <div class="extensions-panel" id="extensions-panel">
+        <div class="extensions-header">
+            <h2>Extensions</h2>
+            <button class="close-extensions" id="close-extensions">×</button>
+        </div>
+
+        <div class="extension-card">
+            <div class="extension-title">Median mLib-.</div>
+            <div class="extension-author">by Akira Amenoke</div>
+            <div class="extension-description">
+                The standard library of the Median+ language. Provides standard input/output operations.
+            </div>
+            <div class="extension-actions">
+                <button class="extension-btn toggle-btn">Enable</button>
+                <button class="extension-btn download-btn">Download</button>
+                <button class="extension-btn remove-btn">Remove</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const editor = document.getElementById('editor');
+            const terminal = document.getElementById('terminal-content-terminal');
+            const problems = document.getElementById('terminal-content-problems');
+            const output = document.getElementById('terminal-content-output');
+            const runButton = document.getElementById('run-button');
+            const filenameDisplay = document.getElementById('filename-display');
+            const filenameInput = document.getElementById('filename-input');
+            const extensionsButton = document.getElementById('extensions-button');
+            const extensionsPanel = document.getElementById('extensions-panel');
+            const closeExtensions = document.getElementById('close-extensions');
+            const tooltip = document.getElementById('tooltip');
+            const importButton = document.getElementById('import-button');
+            const exportButton = document.getElementById('export-button');
+            const fileInput = document.getElementById('file-input');
+            const tabs = document.querySelectorAll('.terminal-tabs .tab');
+
+            const extensionsState = {
+                textExtension: {
+                    downloaded: false,
+                    enabled: false
+                }
+            };
+
+            const terminalContent = {
+                terminal: [
+                    { text: 'Median processor started...', type: 'output' },
+                    { text: '@ContentId Terminal', type: 'info' }
+                ],
+                problems: [],
+                output: []
+            };
+
+            document.querySelector('.toggle-btn').style.display = 'none';
+            document.querySelector('.remove-btn').style.display = 'none';
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function () {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+
+                    document.querySelectorAll('.terminal-content').forEach(content => {
+                        content.classList.remove('active');
+                    });
+
+                    document.getElementById(`terminal-content-${this.dataset.tab}`).classList.add('active');
+                });
+            });
+
+            extensionsButton.addEventListener('click', function () {
+                extensionsPanel.classList.add('open');
+            });
+
+            closeExtensions.addEventListener('click', function () {
+                extensionsPanel.classList.remove('open');
+            });
+
+            document.querySelector('.download-btn').addEventListener('click', function () {
+                const extensionCard = this.closest('.extension-card');
+                const extensionTitle = extensionCard.querySelector('.extension-title').textContent;
+
+                addTerminalLine(`Installing "${extensionTitle}"...`, 'info');
+
+                setTimeout(() => {
+                    extensionsState.textExtension.downloaded = true;
+
+                    const toggleBtn = extensionCard.querySelector('.toggle-btn');
+                    const removeBtn = extensionCard.querySelector('.remove-btn');
+
+                    toggleBtn.style.display = 'inline-block';
+                    removeBtn.style.display = 'inline-block';
+                    this.style.display = 'none';
+
+                    addTerminalLine(`"${extensionTitle}" installed successfully`, 'success');
+                    addTerminalLine(`Click "Enable" to activate text processing`, 'info');
+
+                    toggleBtn.addEventListener('click', function () {
+                        extensionsState.textExtension.enabled = !extensionsState.textExtension.enabled;
+                        this.classList.toggle('active');
+                        this.textContent = extensionsState.textExtension.enabled ? 'Disable' : 'Enable';
+
+                        const status = extensionsState.textExtension.enabled ? 'enabled' : 'disabled';
+                        addTerminalLine(`Text Extension ${status}`, 'info');
+
+                        if (extensionsState.textExtension.enabled) {
+                            addTerminalLine(`Text processing features activated`, 'info');
+                            editor.querySelectorAll('.line-code').forEach(lineCode => {
+                                applySyntaxHighlighting(lineCode);
+                            });
+                        } else {
+                            editor.querySelectorAll('.line-code').forEach(lineCode => {
+                                const text = lineCode.textContent;
+                                lineCode.innerHTML = '';
+                                lineCode.appendChild(document.createTextNode(text));
+                            });
+                        }
+                    });
+
+                    removeBtn.addEventListener('click', function () {
+                        if (confirm(`Remove "${extensionTitle}" extension?`)) {
+                            extensionsState.textExtension.downloaded = false;
+                            extensionsState.textExtension.enabled = false;
+
+                            toggleBtn.style.display = 'none';
+                            removeBtn.style.display = 'none';
+                            document.querySelector('.download-btn').style.display = 'inline-block';
+                            toggleBtn.classList.remove('active');
+                            toggleBtn.textContent = 'Enable';
+
+                            addTerminalLine(`"${extensionTitle}" removed`, 'warning');
+
+                            editor.querySelectorAll('.line-code').forEach(lineCode => {
+                                const text = lineCode.textContent;
+                                lineCode.innerHTML = '';
+                                lineCode.appendChild(document.createTextNode(text));
+                            });
+                        }
+                    });
+                }, 1000);
+            });
+
+            importButton.addEventListener('click', function () {
+                fileInput.click();
+            });
+
+            fileInput.addEventListener('change', function (e) {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const content = e.target.result;
+                    loadFileContent(content);
+                    filenameDisplay.textContent = file.name;
+                    filenameInput.value = file.name;
+                    addTerminalLine(`Imported file: ${file.name}`, 'info');
+                };
+                reader.readAsText(file);
+            });
+
+            exportButton.addEventListener('click', function () {
+                const content = getEditorContent();
+                const filename = filenameDisplay.textContent;
+
+                const blob = new Blob([content], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                a.click();
+
+                URL.revokeObjectURL(url);
+                addTerminalLine(`Exported file: ${filename}`, 'info');
+            });
+
+            function loadFileContent(content) {
+                editor.innerHTML = '';
+
+                const lines = content.split('\n');
+                lines.forEach((line, index) => {
+                    const lineDiv = document.createElement('div');
+                    lineDiv.className = 'editor-line';
+
+                    const lineNumberDiv = document.createElement('div');
+                    lineNumberDiv.className = 'line-number';
+                    lineNumberDiv.textContent = index + 1;
+                    lineDiv.appendChild(lineNumberDiv);
+
+                    const lineCodeDiv = document.createElement('div');
+                    lineCodeDiv.className = 'line-code';
+                    lineCodeDiv.contentEditable = 'true';
+                    lineCodeDiv.textContent = line;
+                    lineDiv.appendChild(lineCodeDiv);
+
+                    editor.appendChild(lineDiv);
+                    setupLineEvents(lineDiv);
+
+                    if (extensionsState.textExtension.enabled) {
+                        applySyntaxHighlighting(lineCodeDiv);
+                    }
+                });
+
+                if (lines.length === 0) {
+                    addNewLineAfter(editor.querySelector('.editor-line'));
+                }
+            }
+
+            function getEditorContent() {
+                const lines = [];
+                editor.querySelectorAll('.editor-line .line-code').forEach(line => {
+                    lines.push(line.textContent);
+                });
+                return lines.join('\n');
+            }
+
+            function addNewLineAfter(currentLine) {
+                const newLine = document.createElement('div');
+                newLine.className = 'editor-line';
+
+                const lineNumberDiv = document.createElement('div');
+                lineNumberDiv.className = 'line-number';
+                lineNumberDiv.textContent = parseInt(currentLine.querySelector('.line-number').textContent) + 1;
+                newLine.appendChild(lineNumberDiv);
+
+                const lineCodeDiv = document.createElement('div');
+                lineCodeDiv.className = 'line-code';
+                lineCodeDiv.contentEditable = 'true';
+                newLine.appendChild(lineCodeDiv);
+
+                currentLine.after(newLine);
+
+                let nextLine = newLine.nextElementSibling;
+                while (nextLine) {
+                    const currentNum = parseInt(nextLine.querySelector('.line-number').textContent);
+                    nextLine.querySelector('.line-number').textContent = currentNum + 1;
+                    nextLine = nextLine.nextElementSibling;
+                }
+
+                lineCodeDiv.focus();
+                setupLineEvents(newLine);
+            }
+
+            function setupLineEvents(line) {
+                const lineCode = line.querySelector('.line-code');
+
+                lineCode.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addNewLineAfter(line);
+                    } else if (e.key === 'Tab') {
+                        e.preventDefault();
+                        document.execCommand('insertText', false, '    ');
+                    } else if (e.key === 'Backspace' && lineCode.textContent === '' &&
+                        editor.querySelectorAll('.editor-line').length > 1) {
+                        e.preventDefault();
+                        deleteLine(line);
+                    }
+                });
+
+                lineCode.addEventListener('input', function () {
+                    applySyntaxHighlighting(lineCode);
+                });
+
+                lineCode.addEventListener('mouseover', function (e) {
+                    if (e.target.classList.contains('comment')) {
+                        showTooltip(e.target, 'comment');
+                    } else if (e.target.classList.contains('hash-structure')) {
+                        showTooltip(e.target, 'dstruct output = dtext*<>');
+                    } else if (e.target.classList.contains('output-structure')) {
+                        showTooltip(e.target, 'dstruct output = dtext<>');
+                    }
+                });
+
+                lineCode.addEventListener('mouseout', hideTooltip);
+
+                if (extensionsState.textExtension.enabled) {
+                    applySyntaxHighlighting(lineCode);
+                }
+            }
+
+            function showTooltip(element, text) {
+                const rect = element.getBoundingClientRect();
+                tooltip.textContent = text;
+                tooltip.style.display = 'block';
+                tooltip.style.left = `${rect.left}px`;
+                tooltip.style.top = `${rect.top - 30}px`;
+
+                if (element.classList.contains('hash-structure')) {
+                    tooltip.classList.add('hash-tooltip');
+                    tooltip.classList.remove('output-tooltip');
+                } else if (element.classList.contains('output-structure')) {
+                    tooltip.classList.add('output-tooltip');
+                    tooltip.classList.remove('hash-tooltip');
+                } else {
+                    tooltip.classList.remove('hash-tooltip', 'output-tooltip');
+                }
+            }
+
+            function hideTooltip() {
+                tooltip.style.display = 'none';
+            }
+
+            function applySyntaxHighlighting(element) {
+                const text = element.textContent;
+                const cursorPos = saveCursorPosition(element);
+
+                element.innerHTML = '';
+                element.appendChild(document.createTextNode(text));
+
+                if (text.startsWith('//')) {
+                    const span = document.createElement('span');
+                    span.className = 'comment';
+                    span.textContent = text;
+                    element.innerHTML = '';
+                    element.appendChild(span);
+                }
+                else if (extensionsState.textExtension.enabled) {
+                    if (text.startsWith('[hash] ')) {
+                        const command = text.substring(0, 7);
+                        const content = text.substring(7);
+                        element.innerHTML = `<span class="hash-structure">${command}</span>${content}`;
+                    }
+                    else if (text.startsWith('output ')) {
+                        const command = text.substring(0, 7);
+                        const content = text.substring(7);
+                        element.innerHTML = `<span class="output-structure">${command}</span>${content}`;
+                    }
+                }
+
+                restoreCursorPosition(element, cursorPos);
+            }
+
+            function saveCursorPosition(element) {
+                const selection = window.getSelection();
+                if (selection.rangeCount === 0) return null;
+
+                const range = selection.getRangeAt(0);
+                const preSelectionRange = range.cloneRange();
+                preSelectionRange.selectNodeContents(element);
+                preSelectionRange.setEnd(range.startContainer, range.startOffset);
+
+                return {
+                    start: preSelectionRange.toString().length,
+                    end: preSelectionRange.toString().length + range.toString().length
+                };
+            }
+
+            function restoreCursorPosition(element, cursorPos) {
+                if (!cursorPos) return;
+
+                const selection = window.getSelection();
+                const range = document.createRange();
+
+                let charIndex = 0;
+                let startNode = null, startOffset = 0;
+                let endNode = null, endOffset = 0;
+
+                function traverse(node) {
+                    if (node.nodeType === Node.TEXT_NODE) {
+                        const nextCharIndex = charIndex + node.length;
+
+                        if (!startNode && cursorPos.start >= charIndex && cursorPos.start <= nextCharIndex) {
+                            startNode = node;
+                            startOffset = cursorPos.start - charIndex;
+                        }
+
+                        if (!endNode && cursorPos.end >= charIndex && cursorPos.end <= nextCharIndex) {
+                            endNode = node;
+                            endOffset = cursorPos.end - charIndex;
+                        }
+
+                        charIndex = nextCharIndex;
+                    } else {
+                        for (let i = 0; i < node.childNodes.length; i++) {
+                            traverse(node.childNodes[i]);
+                            if (startNode && endNode) break;
+                        }
+                    }
+                }
+
+                traverse(element);
+
+                if (startNode) {
+                    range.setStart(startNode, startOffset);
+                    if (endNode) {
+                        range.setEnd(endNode, endOffset);
+                    } else {
+                        range.setEnd(startNode, startOffset);
+                    }
+                }
+
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+
+            function deleteLine(line) {
+                const nextLine = line.nextElementSibling;
+                line.remove();
+
+                let currentLine = nextLine;
+                while (currentLine) {
+                    const currentNum = parseInt(currentLine.querySelector('.line-number').textContent);
+                    currentLine.querySelector('.line-number').textContent = currentNum - 1;
+                    currentLine = currentLine.nextElementSibling;
+                }
+
+                const prevLine = line.previousElementSibling;
+                if (prevLine) {
+                    prevLine.querySelector('.line-code').focus();
+                }
+            }
+
+            filenameDisplay.addEventListener('click', function () {
+                filenameDisplay.style.display = 'none';
+                filenameInput.style.display = 'inline';
+                filenameInput.focus();
+                filenameInput.select();
+            });
+
+            filenameInput.addEventListener('blur', finishEditingFilename);
+            filenameInput.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter') finishEditingFilename();
+            });
+
+            function finishEditingFilename() {
+                let newName = filenameInput.value.trim();
+                if (!newName.endsWith('.mdn')) {
+                    newName += '.mdn';
+                }
+                filenameInput.value = newName;
+                filenameDisplay.textContent = newName;
+                filenameDisplay.style.display = 'inline';
+                filenameInput.style.display = 'none';
+            }
+
+            function validateLineSyntax(line) {
+                const trimmed = line.trim();
+
+                if (trimmed.startsWith('//')) {
+                    return { valid: true };
+                }
+
+                if (extensionsState.textExtension.enabled) {
+                    const isHash = trimmed.startsWith('[hash] ');
+                    const isOutput = trimmed.startsWith('output ');
+
+                    if (isHash || isOutput) {
+                        const content = trimmed.substring(trimmed.indexOf(' ') + 1);
+
+                        const hasValidQuotes = (content.startsWith('"') && content.endsWith('";')) ||
+                            (content.startsWith("'") && content.endsWith("';"));
+
+                        if (!hasValidQuotes) {
+                            return {
+                                valid: false,
+                                error: 'Error [SOOO2]: Incorrect text formatting.'
+                            };
+                        }
+
+                        const quoteType = content[0];
+                        const lastQuotePos = content.lastIndexOf(quoteType);
+                        if (lastQuotePos <= 0 || content[content.length - 2] !== quoteType) {
+                            return {
+                                valid: false,
+                                error: 'Error [S0003]: Incorrect quotes using.'
+                            };
+                        }
+
+                        return { valid: true };
+                    }
+                }
+
+                return {
+                    valid: false,
+                    error: 'Error [S0001]: The terminal does not support the written structure.'
+                };
+            }
+
+            function processTextContent(text) {
+                if (isComment(text)) {
+                    return { type: 'comment', content: text };
+                }
+
+                const validation = validateLineSyntax(text);
+                if (!validation.valid) {
+                    return { type: 'error', error: validation.error };
+                }
+
+                if (extensionsState.textExtension.enabled) {
+                    const isHash = text.startsWith('[hash] ');
+                    const isOutput = text.startsWith('output ');
+
+                    if (isHash) {
+                        const content = text.substring(7);
+                        const textContent = content.substring(1, content.length - 2);
+                        return {
+                            type: 'hash',
+                            content: textContent,
+                            display: ''
+                        };
+                    }
+                    else if (isOutput) {
+                        const content = text.substring(7);
+                        const textContent = content.substring(1, content.length - 2);
+                        return {
+                            type: 'output',
+                            content: textContent,
+                            display: textContent
+                        };
+                    }
+                }
+
+                return {
+                    type: 'error',
+                    error: 'Error [S0001]: The terminal does not support the written structure.'
+                };
+            }
+
+            function isComment(text) {
+                return text.trim().startsWith('//');
+            }
+
+            runButton.addEventListener('click', function () {
+                terminal.innerHTML = '<div class="terminal-line output">Median processor started...</div>';
+                problems.innerHTML = '';
+                output.innerHTML = '';
+
+                terminalContent.terminal = [
+                    { text: 'Median processor started...', type: 'output' },
+                    { text: '@ContentId Terminal', type: 'info' }
+                ];
+                terminalContent.problems = [];
+                terminalContent.output = [];
+
+                const codeLines = [];
+                editor.querySelectorAll('.editor-line .line-code').forEach(line => {
+                    codeLines.push(line.textContent.trim());
+                });
+
+                addTerminalContent(`> Processing ${filenameDisplay.textContent}:`, 'command');
+
+                let hasErrors = false;
+                let hashCount = 0;
+                let commentCount = 0;
+                let outputCount = 0;
+
+                codeLines.forEach((line, i) => {
+                    if (!line) return;
+
+                    const textResult = processTextContent(line);
+
+                    if (textResult.type === 'error') {
+                        const errorText = ` ${i + 1} | <span class="error">× ERROR: ${textResult.error}</span>`;
+                        addTerminalContent(errorText, 'error');
+                        addProblemContent(errorText, 'error');
+                        hasErrors = true;
+                    }
+                    else if (textResult.type === 'comment') {
+                        commentCount++;
+                        addTerminalContent(` ${i + 1} | // (comment)`, 'info');
+                    }
+                    else if (textResult.type === 'hash') {
+                        hashCount++;
+                        addTerminalContent(` ${i + 1} | <hash> processed`, 'success');
+                    }
+                    else if (textResult.type === 'output') {
+                        outputCount++;
+                        addTerminalContent(` ${i + 1} | output: "${textResult.display}"`, 'output');
+                        addOutputContent(textResult.display, 'output');
+                    }
+                });
+
+                addTerminalContent('', 'output');
+
+                if (hasErrors) {
+                    addTerminalContent(`Processing completed with errors`, 'error');
+                } else {
+                    addTerminalContent(`Processing completed successfully`, 'success');
+                }
+
+                if (extensionsState.textExtension.enabled) {
+                    addTerminalContent(`Hash commands: ${hashCount}`, 'info');
+                    addTerminalContent(`Output commands: ${outputCount}`, 'info');
+                }
+                addTerminalContent(`Comments: ${commentCount}`, 'info');
+
+                updateAllTerminalPanels();
+            });
+
+            function addTerminalContent(text, type = 'output', className = '') {
+                terminalContent.terminal.push({ text, type, className });
+            }
+
+            function addProblemContent(text, type = 'output', className = '') {
+                terminalContent.problems.push({ text, type, className });
+            }
+
+            function addOutputContent(text, type = 'output', className = '') {
+                terminalContent.output.push({ text, type, className });
+            }
+
+            function updateAllTerminalPanels() {
+                terminal.innerHTML = '';
+                terminalContent.terminal.forEach(item => {
+                    const line = document.createElement('div');
+                    line.className = `terminal-line ${item.type}`;
+                    if (item.className) line.classList.add(item.className);
+                    line.innerHTML = item.text;
+                    terminal.appendChild(line);
+                });
+                terminal.scrollTop = terminal.scrollHeight;
+
+                problems.innerHTML = '';
+                terminalContent.problems.forEach(item => {
+                    const line = document.createElement('div');
+                    line.className = `terminal-line ${item.type}`;
+                    if (item.className) line.classList.add(item.className);
+                    line.innerHTML = item.text;
+                    problems.appendChild(line);
+                });
+                problems.scrollTop = problems.scrollHeight;
+
+                output.innerHTML = '';
+                terminalContent.output.forEach(item => {
+                    if (item.text) {
+                        const line = document.createElement('div');
+                        line.className = `terminal-line ${item.type}`;
+                        if (item.className) line.classList.add(item.className);
+                        line.innerHTML = item.text;
+                        output.appendChild(line);
+                    }
+                });
+                output.scrollTop = output.scrollHeight;
+            }
+
+            const firstLine = editor.querySelector('.editor-line');
+            setupLineEvents(firstLine);
+            firstLine.querySelector('.line-code').focus();
+
+            function addTerminalLine(text, type = 'output') {
+                const line = document.createElement('div');
+                line.className = `terminal-line ${type}`;
+                line.innerHTML = text;
+                terminal.appendChild(line);
+                terminal.scrollTop = terminal.scrollHeight;
+            }
+        });
+    </script>
+</body>
+</html>
